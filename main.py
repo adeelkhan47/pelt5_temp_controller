@@ -1,17 +1,22 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QPushButton, QTextEdit
+import json
 import sys
 import time
+
+import matplotlib.pyplot as plt
 import serial
 import serial.tools.list_ports
-import matplotlib.pyplot as plt
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, \
+    QPushButton, QTextEdit
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
 
 class Pelt5ControllerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
+        with open("default_values.json") as file:
+            self.data = json.load(file)
         self.setWindowTitle("Pelt5 Temp Controller")
-        #self.setGeometry(100, 100, 600, 300)  # Set the fixed size of the window
+        # self.setGeometry(100, 100, 600, 300)  # Set the fixed size of the window
 
         # Find the PELT-5 serial port
         ports = list(serial.tools.list_ports.comports())
@@ -25,7 +30,7 @@ class Pelt5ControllerWindow(QMainWindow):
             raise Exception("PELT-5 serial port not found")
 
         self.ser = serial.Serial(pelt_port, 9600, timeout=1)
-        #self.ser = None
+        # self.ser = None
 
         self.init_ui()
 
@@ -108,11 +113,11 @@ class Pelt5ControllerWindow(QMainWindow):
         self.heat_gain_input.setText("1")
 
         layout.addLayout(grid_layout)
-        self.set_default_button = QPushButton("Set Default Values")
+        self.set_default_button = QPushButton("Reset PID Parameters for Probe in Liquid")
         self.set_default_button.clicked.connect(self.set_default_values)
         layout.addWidget(self.set_default_button)
 
-        self.set_default_button_2 = QPushButton("Set Default Values 2")
+        self.set_default_button_2 = QPushButton("Reset PID Parameters for Probe on Plate Surface")
         self.set_default_button_2.clicked.connect(self.set_default_values_2)
         layout.addWidget(self.set_default_button_2)
 
@@ -204,13 +209,13 @@ class Pelt5ControllerWindow(QMainWindow):
         time.sleep(1)
 
     def set_default_values(self):
-        self.desired_temp_input.setText("0")
-        self.cold_derivative_input.setText("0")
-        self.cold_reset_input.setText("0")
-        self.cold_gain_input.setText("0")
-        self.heat_derivative_input.setText("0")
-        self.heat_reset_input.setText("0")
-        self.heat_gain_input.setText("0")
+        self.desired_temp_input.setText(str(self.data["liquid"]["new_setpoint"]))
+        self.cold_derivative_input.setText(str(self.data["liquid"]["new_cold_derivative"]))
+        self.cold_reset_input.setText(str(self.data["liquid"]["new_cold_reset"]))
+        self.cold_gain_input.setText(str(self.data["liquid"]["new_cold_gain"]))
+        self.heat_derivative_input.setText(str(self.data["liquid"]["new_heat_derivative"]))
+        self.heat_reset_input.setText(str(self.data["liquid"]["new_heat_reset"]))
+        self.heat_gain_input.setText(str(self.data["liquid"]["new_heat_gain"]))
         self.change_setpoint_temperature()
         self.change_desired_cold_derivative()
         self.change_desired_cold_reset()
@@ -220,13 +225,13 @@ class Pelt5ControllerWindow(QMainWindow):
         self.change_desired_heat_gain()
 
     def set_default_values_2(self):
-        self.desired_temp_input.setText("1")
-        self.cold_derivative_input.setText("1")
-        self.cold_reset_input.setText("1")
-        self.cold_gain_input.setText("1")
-        self.heat_derivative_input.setText("1")
-        self.heat_reset_input.setText("1")
-        self.heat_gain_input.setText("1")
+        self.desired_temp_input.setText(str(self.data["plate_surface"]["new_setpoint"]))
+        self.cold_derivative_input.setText(str(self.data["plate_surface"]["new_cold_derivative"]))
+        self.cold_reset_input.setText(str(self.data["plate_surface"]["new_cold_reset"]))
+        self.cold_gain_input.setText(str(self.data["plate_surface"]["new_cold_gain"]))
+        self.heat_derivative_input.setText(str(self.data["plate_surface"]["new_heat_derivative"]))
+        self.heat_reset_input.setText(str(self.data["plate_surface"]["new_heat_reset"]))
+        self.heat_gain_input.setText(str(self.data["plate_surface"]["new_heat_gain"]))
         self.change_setpoint_temperature()
         self.change_desired_cold_derivative()
         self.change_desired_cold_reset()
@@ -246,6 +251,7 @@ class Pelt5ControllerWindow(QMainWindow):
         # Close the serial port on window close
         self.ser.close()
         event.accept()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

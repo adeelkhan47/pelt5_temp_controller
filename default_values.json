@@ -1,0 +1,23 @@
+{
+  "liquid":
+  {
+    "new_setpoint" : 37.05,
+    "new_cold_derivative" : 56.3,
+    "new_cold_reset" : 77,
+    "new_cold_gain" : 10.1,
+    "new_heat_derivative" : 123.4,
+    "new_heat_reset" : 456.7,
+    "new_heat_gain" : 510
+  },
+  "plate_surface":
+  {
+    "new_setpoint" : 37.05,
+    "new_cold_derivative" : 56.3,
+    "new_cold_reset" : 77,
+    "new_cold_gain" : 10.1,
+    "new_heat_derivative" : 123.4,
+    "new_heat_reset" : 456.7,
+    "new_heat_gain" : 510
+  }
+
+}
