@@ -17,19 +17,12 @@ class Pelt5ControllerWindow(QMainWindow):
             self.data = json.load(file)
         self.setWindowTitle("Pelt5 Temp Controller")
         # self.setGeometry(100, 100, 600, 300)  # Set the fixed size of the window
+        self.setFixedSize(800,1000)  # Set the fixed size of the window
 
         # Find the PELT-5 serial port
-        ports = list(serial.tools.list_ports.comports())
-        pelt_port = None
-        for port in ports:
-            if "PELT-5" in port.description or "pelt-v" in port.description.casefold() or "peltv" in port.description.casefold() \
-                    or "pelt" in port.description.casefold():
-                pelt_port = port.device
-                break
-        else:
-            raise Exception("PELT-5 serial port not found")
 
-        self.ser = serial.Serial(pelt_port, 9600, timeout=1)
+        self.ser = None
+        self.port = 9600
         # self.ser = None
 
         self.init_ui()
@@ -104,6 +97,15 @@ class Pelt5ControllerWindow(QMainWindow):
         grid_layout.addWidget(self.heat_gain_input, 6, 1)
         grid_layout.addWidget(change_heat_gain_button, 6, 2)
 
+        # Desired Heat Gain
+        port_label = QLabel("Port")
+        self.port_input = QLineEdit()
+        port_button = QPushButton("Change Value")
+        port_button.clicked.connect(self.change_port)
+        grid_layout.addWidget(port_label, 7, 0)
+        grid_layout.addWidget(self.port_input, 7, 1)
+        grid_layout.addWidget(port_button, 7, 2)
+
         self.desired_temp_input.setText("1")
         self.cold_derivative_input.setText("1")
         self.cold_reset_input.setText("1")
@@ -111,6 +113,7 @@ class Pelt5ControllerWindow(QMainWindow):
         self.heat_derivative_input.setText("1")
         self.heat_reset_input.setText("1")
         self.heat_gain_input.setText("1")
+        self.port_input.setText(str(self.port))
 
         layout.addLayout(grid_layout)
         self.set_default_button = QPushButton("Reset PID Parameters for Probe in Liquid")
@@ -206,6 +209,20 @@ class Pelt5ControllerWindow(QMainWindow):
         command = f'g {gain:.1f}'
         self.send_command(command)
         print('Desired heat gain set successfully.')
+        time.sleep(1)
+
+    def change_port(self):
+        self.port = int(self.port_input.text())
+        ports = list(serial.tools.list_ports.comports())
+        pelt_port = None
+        for port in ports:
+            if "PELT-5" in port.description or "pelt-v" in port.description.casefold() or "peltv" in port.description.casefold() \
+                    or "pelt" in port.description.casefold():
+                pelt_port = port.device
+                break
+        else:
+            raise Exception("PELT-5 serial port not found")
+        self.ser = serial.Serial(pelt_port, self.port, timeout=1)
         time.sleep(1)
 
     def set_default_values(self):
