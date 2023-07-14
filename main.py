@@ -5,6 +5,7 @@ import time
 import matplotlib.pyplot as plt
 import serial
 import serial.tools.list_ports
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, \
     QPushButton, QTextEdit, QComboBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -17,7 +18,7 @@ class Pelt5ControllerWindow(QMainWindow):
             self.data = json.load(file)
         self.setWindowTitle("Pelt5 Temp Controller")
         # self.setGeometry(100, 100, 600, 300)  # Set the fixed size of the window
-        self.setFixedSize(800,1000)  # Set the fixed size of the window
+        #self.setFixedSize(800,1500)  # Set the fixed size of the window
 
         # Find the PELT-5 serial port
 
@@ -31,6 +32,9 @@ class Pelt5ControllerWindow(QMainWindow):
         # self.ser = None
         self.ser = serial.Serial(self.pelt_port[1], 9600, timeout=1)
         self.init_ui()
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.get_temperature)
+        self.timer.start(1000)
 
     def init_ui(self):
         main_widget = QWidget()
@@ -149,6 +153,16 @@ class Pelt5ControllerWindow(QMainWindow):
         self.log_textfield.setText("Application Started Successfully.\n")
         layout.addWidget(self.log_textfield)
         self.show()
+
+    def get_temperature(self):
+        command = 'T'
+        reply = self.send_command(command)
+        if len(reply) > 0:
+            temperature = float(reply.split(',')[1])  # parse the reply to get the temperature
+            self.log_textfield.append(f"Current temperature: {temperature}")
+            print(f'Current temperature: {temperature}')
+        # time.sleep(1)
+
 
     def plot_graph(self):
         figure = plt.figure()
@@ -269,6 +283,13 @@ class Pelt5ControllerWindow(QMainWindow):
         return reply
 
     def closeEvent(self, event):
+        # Close the serial port on window close
+        self.ser.close()
+        event.accept()
+
+    def closeEvent(self, event):
+        # Stop the timer when the window is closing to avoid unnecessary operations.
+        self.timer.stop()
         # Close the serial port on window close
         self.ser.close()
         event.accept()
