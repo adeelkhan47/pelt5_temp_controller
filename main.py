@@ -30,7 +30,7 @@ class Pelt5ControllerWindow(QMainWindow):
             if port.device:
                 self.pelt_port.append(port.device)
         # self.ser = None
-        self.ser = serial.Serial(self.pelt_port[1], 9600, timeout=1)
+        self.ser = serial.Serial(self.pelt_port[0], 9600, timeout=1)
         self.init_ui()
         self.timer = QTimer()
         self.timer.timeout.connect(self.get_temperature)
