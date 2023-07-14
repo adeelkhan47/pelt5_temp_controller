@@ -1,5 +1,6 @@
 import json
 import sys
+import threading
 import time
 
 import matplotlib.pyplot as plt
@@ -156,12 +157,31 @@ class Pelt5ControllerWindow(QMainWindow):
 
     def get_temperature(self):
         command = 'T'
-        reply = self.send_command(command)
-        if len(reply) > 0:
+        self.send_command(command)
+
+        start_time = time.time()  # start the timer
+        reply = None
+
+        # create a thread that will continuously check for replies
+        def check_for_reply():
+            nonlocal reply  # allow the thread to modify the reply variable
+            while True:
+                reply = self.send_command(command)  # assuming this is the method you use to receive replies
+                if reply or time.time() - start_time > 0.1:  # if a reply is received or 100ms has passed, stop checking
+                    break
+
+        # start the thread
+        thread = threading.Thread(target=check_for_reply)
+        thread.start()
+
+        # wait for the thread to finish
+        thread.join()
+
+        if reply:  # if a reply was received
             temperature = float(reply.split(',')[1])  # parse the reply to get the temperature
             self.log_textfield.append(f"Current temperature: {temperature}")
             print(f'Current temperature: {temperature}')
-        # time.sleep(1)
+        time.sleep(1)
 
 
     def plot_graph(self):
