@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import serial
 import serial.tools.list_ports
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, \
-    QPushButton, QTextEdit
+    QPushButton, QTextEdit, QComboBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
@@ -23,8 +23,13 @@ class Pelt5ControllerWindow(QMainWindow):
 
         self.ser = None
         self.port = 9600
+        ports = list(serial.tools.list_ports.comports())
+        self.pelt_port = []
+        for port in ports:
+            if port.device:
+                self.pelt_port.append(port.device)
         # self.ser = None
-
+        self.ser = serial.Serial(self.pelt_port[1], 9600, timeout=1)
         self.init_ui()
 
     def init_ui(self):
@@ -99,7 +104,8 @@ class Pelt5ControllerWindow(QMainWindow):
 
         # Desired Heat Gain
         port_label = QLabel("Port")
-        self.port_input = QLineEdit()
+        self.port_input = QComboBox()  # Change this line
+        self.port_input.addItems(self.pelt_port)  # Add this line to load the list of strings into the dropdown
         port_button = QPushButton("Change Value")
         port_button.clicked.connect(self.change_port)
         grid_layout.addWidget(port_label, 7, 0)
@@ -113,7 +119,7 @@ class Pelt5ControllerWindow(QMainWindow):
         self.heat_derivative_input.setText("1")
         self.heat_reset_input.setText("1")
         self.heat_gain_input.setText("1")
-        self.port_input.setText(str(self.port))
+        #self.port_input.se(self.pelt_port[0])
 
         layout.addLayout(grid_layout)
         self.set_default_button = QPushButton("Reset PID Parameters for Probe in Liquid")
@@ -139,10 +145,9 @@ class Pelt5ControllerWindow(QMainWindow):
         layout.addWidget(canvas)
 
         # Log Text Field
-        log_textfield = QTextEdit()
-        log_textfield.setText("Application Started Successfully.\n")
-        layout.addWidget(log_textfield)
-
+        self.log_textfield = QTextEdit()
+        self.log_textfield.setText("Application Started Successfully.\n")
+        layout.addWidget(self.log_textfield)
         self.show()
 
     def plot_graph(self):
@@ -166,6 +171,7 @@ class Pelt5ControllerWindow(QMainWindow):
         if len(reply) > 0:
             setpoint = float(reply.split(',')[1])
             if setpoint == temperature:
+                self.log_textfield.append("Setpoint temperature changed successfully.")
                 print('Setpoint temperature changed successfully.')
         time.sleep(1)
 
@@ -173,6 +179,7 @@ class Pelt5ControllerWindow(QMainWindow):
         derivative = float(self.cold_derivative_input.text())
         command = f'd {derivative:.1f}'
         self.send_command(command)
+        self.log_textfield.append("Desired cold derivative set successfully.")
         print('Desired cold derivative set successfully.')
         time.sleep(1)
 
@@ -180,6 +187,8 @@ class Pelt5ControllerWindow(QMainWindow):
         reset = float(self.cold_reset_input.text())
         command = f'R+{reset:.1f}'
         self.send_command(command)
+
+        self.log_textfield.append("Desired cold reset set successfully.")
         print('Desired cold reset set successfully.')
         time.sleep(1)
 
@@ -187,6 +196,7 @@ class Pelt5ControllerWindow(QMainWindow):
         gain = float(self.cold_gain_input.text())
         command = f'G {gain:.1f}'
         self.send_command(command)
+        self.log_textfield.append("Desired cold gain set successfully.")
         print('Desired cold gain set successfully.')
         time.sleep(1)
 
@@ -194,6 +204,7 @@ class Pelt5ControllerWindow(QMainWindow):
         derivative = float(self.heat_derivative_input.text())
         command = f'D {derivative:.1f}'
         self.send_command(command)
+        self.log_textfield.append("Desired heat derivative set successfully.")
         print('Desired heat derivative set successfully.')
         time.sleep(1)
 
@@ -201,6 +212,7 @@ class Pelt5ControllerWindow(QMainWindow):
         reset = float(self.heat_reset_input.text())
         command = f'r+{reset:.1f}'
         self.send_command(command)
+        self.log_textfield.append("Desired heat reset set successfully.")
         print('Desired heat reset set successfully.')
         time.sleep(1)
 
@@ -208,21 +220,13 @@ class Pelt5ControllerWindow(QMainWindow):
         gain = float(self.heat_gain_input.text())
         command = f'g {gain:.1f}'
         self.send_command(command)
+        self.log_textfield.append("Desired heat gain set successfully.")
         print('Desired heat gain set successfully.')
         time.sleep(1)
 
     def change_port(self):
-        self.port = int(self.port_input.text())
-        ports = list(serial.tools.list_ports.comports())
-        pelt_port = None
-        for port in ports:
-            if "PELT-5" in port.description or "pelt-v" in port.description.casefold() or "peltv" in port.description.casefold() \
-                    or "pelt" in port.description.casefold():
-                pelt_port = port.device
-                break
-        else:
-            raise Exception("PELT-5 serial port not found")
-        self.ser = serial.Serial(pelt_port, self.port, timeout=1)
+        self.port = self.port_input.currentText()
+        self.ser = serial.Serial(self.port, 9600, timeout=1)
         time.sleep(1)
 
     def set_default_values(self):
