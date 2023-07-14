@@ -1,6 +1,5 @@
 import json
 import sys
-import threading
 import time
 
 import matplotlib.pyplot as plt
@@ -19,21 +18,28 @@ class Pelt5ControllerWindow(QMainWindow):
             self.data = json.load(file)
         self.setWindowTitle("Pelt5 Temp Controller")
         # self.setGeometry(100, 100, 600, 300)  # Set the fixed size of the window
-        #self.setFixedSize(800,1500)  # Set the fixed size of the window
+        # self.setFixedSize(800,1500)  # Set the fixed size of the window
 
         # Find the PELT-5 serial port
 
         self.ser = None
         self.port = 9600
+        self.x_axis = []
+        self.y_axis = []
+        self.y_axis_2 = []
+        self.x = 30
+        self.y = 20
+        self.y2 = 60
         ports = list(serial.tools.list_ports.comports())
         self.pelt_port = []
         for port in ports:
             if port.device:
                 self.pelt_port.append(port.device)
         # self.ser = None
-        self.ser = serial.Serial(self.pelt_port[0], 9600, timeout=1)
+        self.ser = serial.Serial(self.pelt_port[1], 9600, timeout=1)
         self.init_ui()
         self.timer = QTimer()
+
         self.timer.timeout.connect(self.get_temperature)
         self.timer.start(1000)
 
@@ -124,7 +130,7 @@ class Pelt5ControllerWindow(QMainWindow):
         self.heat_derivative_input.setText("1")
         self.heat_reset_input.setText("1")
         self.heat_gain_input.setText("1")
-        #self.port_input.se(self.pelt_port[0])
+        # self.port_input.se(self.pelt_port[0])
 
         layout.addLayout(grid_layout)
         self.set_default_button = QPushButton("Reset PID Parameters for Probe in Liquid")
@@ -146,8 +152,8 @@ class Pelt5ControllerWindow(QMainWindow):
         layout.addWidget(start_spreadsheet_row_button)
 
         # Graph
-        canvas = self.plot_graph()
-        layout.addWidget(canvas)
+        self.canvas = self.plot_graph()
+        layout.addWidget(self.canvas)
 
         # Log Text Field
         self.log_textfield = QTextEdit()
@@ -156,46 +162,62 @@ class Pelt5ControllerWindow(QMainWindow):
         self.show()
 
     def get_temperature(self):
-        command = 'T'
-        self.send_command(command)
+        # command = 'T'
+        # self.send_command(command)
+        #
+        # start_time = time.time()  # start the timer
+        # reply = None
+        #
+        # # create a thread that will continuously check for replies
+        # def check_for_reply():
+        #     nonlocal reply  # allow the thread to modify the reply variable
+        #     while True:
+        #         reply = self.send_command(command)  # assuming this is the method you use to receive replies
+        #         if reply or time.time() - start_time > 0.1:  # if a reply is received or 100ms has passed, stop checking
+        #             break
+        #
+        # # start the thread
+        # thread = threading.Thread(target=check_for_reply)
+        # thread.start()
+        #
+        # # wait for the thread to finish
+        # thread.join()
+        #
+        # if reply:  # if a reply was received
+        #     temperature = float(reply.split(',')[1])  # parse the reply to get the temperature
+        #     self.log_textfield.append(f"Current temperature: {temperature}")
+        #     print(f'Current temperature: {temperature}')
+        # time.sleep(1)
+        self.x_axis.append(self.x)
+        self.y_axis.append(self.y)
+        self.y_axis_2.append(self.y2)
+        self.x = self.x + 5
+        self.y = self.y + 1
+        self.y2 = self.y2 - 1
+        self.update_graph()
 
-        start_time = time.time()  # start the timer
-        reply = None
-
-        # create a thread that will continuously check for replies
-        def check_for_reply():
-            nonlocal reply  # allow the thread to modify the reply variable
-            while True:
-                reply = self.send_command(command)  # assuming this is the method you use to receive replies
-                if reply or time.time() - start_time > 0.1:  # if a reply is received or 100ms has passed, stop checking
-                    break
-
-        # start the thread
-        thread = threading.Thread(target=check_for_reply)
-        thread.start()
-
-        # wait for the thread to finish
-        thread.join()
-
-        if reply:  # if a reply was received
-            temperature = float(reply.split(',')[1])  # parse the reply to get the temperature
-            self.log_textfield.append(f"Current temperature: {temperature}")
-            print(f'Current temperature: {temperature}')
-        time.sleep(1)
-
+    def update_graph(self):
+        self.ax.clear()
+        self.ax.set_xlabel("Time (s)")
+        self.ax.set_ylabel("Temperature (°C)")
+        self.ax.set_xlim(0, 4000)
+        self.ax.set_ylim(0, 100)
+        self.ax.plot(self.x_axis, self.y_axis, color='blue', label='Set Temperature ')  # First line
+        self.ax.plot(self.x_axis, self.y_axis_2, color='red', label='Measured Temperature')
+        self.ax.legend()
+        self.canvas.draw()
 
     def plot_graph(self):
-        figure = plt.figure()
-        ax = figure.add_subplot(111)
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Temperature (°C)")
-        ax.set_xlim(0, 40000)
-        ax.set_ylim(0, 100)
+        self.figure = plt.figure()
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_xlabel("Time (s)")
+        self.ax.set_ylabel("Temperature (°C)")
+        self.ax.set_xlim(0, 4000)
+        self.ax.set_ylim(0, 100)
         # Add your dummy data here
-        x = [0, 10000, 20000, 30000, 40000]
-        y = [25, 50, 75, 80, 90]
-        ax.plot(x, y)
-        canvas = FigureCanvas(figure)
+
+        self.ax.plot(self.x_axis, self.x_axis)
+        canvas = FigureCanvas(self.figure)
         return canvas
 
     def change_setpoint_temperature(self):
