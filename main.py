@@ -34,7 +34,7 @@ class Pelt5ControllerWindow(QMainWindow):
         self.y_axis_2 = []
         self.x = 0
         self.y = 20
-        self.y2 = 60
+        self.y2 = 0
         ports = list(serial.tools.list_ports.comports())
         self.pelt_port = []
         for port in ports:
@@ -128,7 +128,7 @@ class Pelt5ControllerWindow(QMainWindow):
         grid_layout.addWidget(self.port_input, 7, 1)
         grid_layout.addWidget(port_button, 7, 2)
 
-        self.desired_temp_input.setText("1")
+        self.desired_temp_input.setText("20")
         self.cold_derivative_input.setText("1")
         self.cold_reset_input.setText("1")
         self.cold_gain_input.setText("1")
