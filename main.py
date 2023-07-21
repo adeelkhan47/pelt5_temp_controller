@@ -11,6 +11,11 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGr
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
+def read_response(ser):
+    response = ser.readline().decode('utf-8').strip()
+    return response
+
+
 class Pelt5ControllerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -27,7 +32,7 @@ class Pelt5ControllerWindow(QMainWindow):
         self.x_axis = []
         self.y_axis = []
         self.y_axis_2 = []
-        self.x = 30
+        self.x = 0
         self.y = 20
         self.y2 = 60
         ports = list(serial.tools.list_ports.comports())
@@ -143,12 +148,13 @@ class Pelt5ControllerWindow(QMainWindow):
 
         # Feed Profile Row
         feed_profile_button = QPushButton("Feed Profile from Spreadsheet")
-        interval_label = QLabel("Interval:")
-        interval_input = QLineEdit()
+        self.interval_label = QLabel("Interval:")
+        self.interval_input = QLineEdit()
+        self.interval_input.setText("5")
         start_spreadsheet_row_button = QPushButton("Start Spreadsheet Row")
         layout.addWidget(feed_profile_button)
-        layout.addWidget(interval_label)
-        layout.addWidget(interval_input)
+        layout.addWidget(self.interval_label)
+        layout.addWidget(self.interval_input)
         layout.addWidget(start_spreadsheet_row_button)
 
         # Graph
@@ -162,46 +168,30 @@ class Pelt5ControllerWindow(QMainWindow):
         self.show()
 
     def get_temperature(self):
-        # command = 'T'
-        # self.send_command(command)
-        #
-        # start_time = time.time()  # start the timer
-        # reply = None
-        #
-        # # create a thread that will continuously check for replies
-        # def check_for_reply():
-        #     nonlocal reply  # allow the thread to modify the reply variable
-        #     while True:
-        #         reply = self.send_command(command)  # assuming this is the method you use to receive replies
-        #         if reply or time.time() - start_time > 0.1:  # if a reply is received or 100ms has passed, stop checking
-        #             break
-        #
-        # # start the thread
-        # thread = threading.Thread(target=check_for_reply)
-        # thread.start()
-        #
-        # # wait for the thread to finish
-        # thread.join()
-        #
-        # if reply:  # if a reply was received
-        #     temperature = float(reply.split(',')[1])  # parse the reply to get the temperature
-        #     self.log_textfield.append(f"Current temperature: {temperature}")
-        #     print(f'Current temperature: {temperature}')
-        # time.sleep(1)
+        command = '?'
+        self.ser.write((command + '\r\n').encode('utf-8'))
+        response = self.ser.readline().decode('utf-8').strip()
+        read_temp = 0
+        if response:
+            _, _, _, read_temp = response.split(',')
+            print(f'Current temperature: {read_temp}°C')
+
+        self.y2 = float(read_temp)
         self.x_axis.append(self.x)
         self.y_axis.append(self.y)
         self.y_axis_2.append(self.y2)
-        self.x = self.x + 5
-        self.y = self.y + 1
-        self.y2 = self.y2 - 1
+        self.x = self.x+1
         self.update_graph()
 
     def update_graph(self):
         self.ax.clear()
         self.ax.set_xlabel("Time (s)")
         self.ax.set_ylabel("Temperature (°C)")
-        self.ax.set_xlim(0, 4000)
-        self.ax.set_ylim(0, 100)
+        val = 300
+        if self.interval_input.text():
+            val = int(self.interval_input.text())*60
+        self.ax.set_xlim(0, val)
+        self.ax.set_ylim(0, 50)
         self.ax.plot(self.x_axis, self.y_axis, color='blue', label='Set Temperature ')  # First line
         self.ax.plot(self.x_axis, self.y_axis_2, color='red', label='Measured Temperature')
         self.ax.legend()
@@ -212,8 +202,11 @@ class Pelt5ControllerWindow(QMainWindow):
         self.ax = self.figure.add_subplot(111)
         self.ax.set_xlabel("Time (s)")
         self.ax.set_ylabel("Temperature (°C)")
-        self.ax.set_xlim(0, 4000)
-        self.ax.set_ylim(0, 100)
+        val = 300
+        if self.interval_input.text():
+            val = int(self.interval_input.text()) * 60
+        self.ax.set_xlim(0, val)
+        self.ax.set_ylim(0, 50)
         # Add your dummy data here
 
         self.ax.plot(self.x_axis, self.x_axis)
@@ -222,6 +215,7 @@ class Pelt5ControllerWindow(QMainWindow):
 
     def change_setpoint_temperature(self):
         temperature = float(self.desired_temp_input.text())
+        self.y = float(self.desired_temp_input.text())
         command = f'T+{temperature:.2f}'
         reply = self.send_command(command)
         if len(reply) > 0:
