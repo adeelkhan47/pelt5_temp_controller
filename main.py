@@ -5,6 +5,7 @@ import time
 import matplotlib.pyplot as plt
 import serial
 import serial.tools.list_ports
+import pandas as pd
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, \
     QPushButton, QTextEdit, QComboBox
@@ -147,12 +148,13 @@ class Pelt5ControllerWindow(QMainWindow):
         layout.addWidget(self.set_default_button_2)
 
         # Feed Profile Row
-        feed_profile_button = QPushButton("Feed Profile from Spreadsheet")
+        self.feed_profile_button = QPushButton("Get Data in Spreadsheet")
+        self.feed_profile_button.clicked.connect(self.get_spreadsheet)
         self.interval_label = QLabel("Interval:")
         self.interval_input = QLineEdit()
         self.interval_input.setText("5")
         start_spreadsheet_row_button = QPushButton("Start Spreadsheet Row")
-        layout.addWidget(feed_profile_button)
+        layout.addWidget(self.feed_profile_button)
         layout.addWidget(self.interval_label)
         layout.addWidget(self.interval_input)
         layout.addWidget(start_spreadsheet_row_button)
@@ -310,6 +312,19 @@ class Pelt5ControllerWindow(QMainWindow):
         self.change_desired_heat_derivative()
         self.change_desired_heat_reset()
         self.change_desired_heat_gain()
+
+    def get_spreadsheet(self):
+        val = 300
+        if self.interval_input.text():
+            val = int(self.interval_input.text()) * 60
+        if val > len(self.x_axis):
+            val = len(self.x_axis)
+        data = {"Time": self.x_axis[:val], "Desired Temperature": self.y_axis[:val], "Measured Temperature": self.y_axis_2[:val]}
+        # Create pandas DataFrame from the dictionary
+        df = pd.DataFrame(data)
+
+        # Write the DataFrame to an Excel file
+        df.to_excel("result.xlsx", index=False)
 
     def send_command(self, command):
         command += '\r\n'  # Append <CR><LF> to the command string
