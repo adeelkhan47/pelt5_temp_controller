@@ -1,11 +1,12 @@
 import json
 import sys
 import time
+from datetime import datetime
 
 import matplotlib.pyplot as plt
+import pandas as pd
 import serial
 import serial.tools.list_ports
-import pandas as pd
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, \
     QPushButton, QTextEdit, QComboBox
@@ -36,6 +37,19 @@ class Pelt5ControllerWindow(QMainWindow):
         self.x = 0
         self.y = 20
         self.y2 = 0
+
+        ##
+        self.data_current_time = []
+        self.data_cold_derivative_input = []
+        self.data_cold_reset_input = []
+        self.data_cold_gain_input = []
+        self.data_heat_derivative_input = []
+        self.data_heat_reset_input = []
+        self.data_heat_gain_input = []
+        ##
+
+        ##
+
         ports = list(serial.tools.list_ports.comports())
         self.pelt_port = []
         for port in ports:
@@ -182,7 +196,21 @@ class Pelt5ControllerWindow(QMainWindow):
         self.x_axis.append(self.x)
         self.y_axis.append(self.y)
         self.y_axis_2.append(self.y2)
-        self.x = self.x+1
+
+        ##
+        current_date = datetime.now()
+
+        # Convert the current date and time to a string
+        current_date_string = current_date.strftime("%Y-%m-%d %H:%M:%S")
+        self.data_current_time.append(current_date)
+        self.data_cold_derivative_input.append(self.cold_derivative_input.text())
+        self.data_cold_reset_input.append(self.cold_reset_input.text())
+        self.data_cold_gain_input.append(self.cold_gain_input.text())
+        self.data_heat_derivative_input.append(self.heat_derivative_input.text())
+        self.data_heat_reset_input.append(self.heat_reset_input.text())
+        self.data_heat_gain_input.append(self.heat_gain_input.text())
+        ##
+        self.x = self.x + 1
         self.update_graph()
 
     def update_graph(self):
@@ -191,7 +219,7 @@ class Pelt5ControllerWindow(QMainWindow):
         self.ax.set_ylabel("Temperature (°C)")
         val = 300
         if self.interval_input.text():
-            val = int(self.interval_input.text())*60
+            val = int(self.interval_input.text()) * 60
         self.ax.set_xlim(0, val)
         self.ax.set_ylim(0, 50)
         self.ax.plot(self.x_axis, self.y_axis, color='blue', label='Set Temperature ')  # First line
@@ -319,8 +347,22 @@ class Pelt5ControllerWindow(QMainWindow):
             val = int(self.interval_input.text()) * 60
         if val > len(self.x_axis):
             val = len(self.x_axis)
-        data = {"Time": self.x_axis[:val], "Desired Temperature": self.y_axis[:val], "Measured Temperature": self.y_axis_2[:val]}
-        # Create pandas DataFrame from the dictionary
+
+        ##
+        data = {"DateTime": self.data_current_time[:val],
+                "Interval": self.x_axis[:val],
+                "Cold Derivative Input": self.data_cold_derivative_input[:val],
+                "Cold Reset Input": self.data_cold_reset_input[:val],
+                "Cold Gain Input": self.data_cold_gain_input[:val],
+                "Heat Derivative Input": self.data_heat_derivative_input[:val],
+                "Heat Reset Input": self.data_heat_reset_input[:val],
+                "Heat Gain Input": self.data_heat_gain_input[:val],
+                "Desired Temperature": self.y_axis[:val],
+                "Measured Temperature": self.y_axis_2[:val]}
+
+        # data = {"Time": self.x_axis[:val], "Desired Temperature": self.y_axis[:val],
+        #         "Measured Temperature": self.y_axis_2[:val]}
+        # # Create pandas DataFrame from the dictionary
         df = pd.DataFrame(data)
 
         # Write the DataFrame to an Excel file
